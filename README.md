@@ -1,1 +1,1 @@
-# GraphicalModels_CPDetection
+# Clustering and Change Point Detection in Bayesian Graphical Models 
