@@ -1,0 +1,24 @@
+# --- Simulations Output and Graphs ---
+figures/*.pdf
+figures/*.png
+
+# --- temp and R session ---
+.Rhistory
+.RData
+.Ruserdata
+.RDataTmp
+*-Ex.R
+/vignettes/*.html
+/vignettes/*.pdf
+
+.Rproj.user/
+.Rapp.history
+
+# --- Cache Quarto / Markdown Preview ---
+.quarto/
+*_cache/
+*_files/
+
+# --- system files (VS) ---
+.DS_Store
+.vscode/
