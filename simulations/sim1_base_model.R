@@ -238,14 +238,23 @@ cor(X)
 mean(accept)
 acf(n_edges_chain) # reasonable, since we move in the neighborhood of the previous decomposable graph
 
-# =========================
-# traceplots for mu
 
-par(mfrow = c(q, 2), mar = c(2,4,4,2))
+# ==============================================================================
+# CONFIGURATION AND FIGURES DIRECTORY SETUP
+# ==============================================================================
+if (!dir.exists("figures")) {
+  dir.create("figures")
+}
+
+# ------------------------------------------------------------------------------
+# 1. TRACEPLOTS & ACF FOR MU (BASE MODEL)
+# ------------------------------------------------------------------------------
+pdf("figures/mu_plots_basemodel.pdf", width = 8, height = 2.2 * q)
+par(mfrow = c(q, 2), mar = c(2, 4, 4, 2))
 
 for (j in 1:q) {
   plot(
-    mu_chain[,j],
+    mu_chain[, j],
     type = "l",
     col = "black",
     lwd = 0.5,
@@ -259,190 +268,209 @@ for (j in 1:q) {
       ylab = paste("mu[", j, "]", sep = "")
   )
 }
+dev.off()
 
 
-# trace plots for upper triangular elements of Omega:
-idx <- which(upper.tri(matrix(0,q,q), diag=TRUE), arr.ind=TRUE)
+# ------------------------------------------------------------------------------
+# 2. TRACEPLOTS & ACF FOR OMEGA (BASE MODEL)
+# ------------------------------------------------------------------------------
+idx <- which(upper.tri(matrix(0, q, q), diag = TRUE), arr.ind = TRUE)
+n_elements <- nrow(idx)
 
-par(mfrow = c(5,3),  mar = c(2,4,4,2))
-for (k in 1:nrow(idx)) {
-  i <- idx[k,1]; j <- idx[k,2]
+# Save Omega traceplots and ACF to a single multi-page PDF (5x3 grid layout)
+pdf("figures/omega_diagnostics_basemodel.pdf", width = 10, height = 12)
 
-  plot(Omega_chain[i,j,], type="l",
-       main=paste("Omega[",i,",",j,"]",sep=""),
-       xlab="iter", ylab="")
+# --- Trace Plots Section ---
+par(mfrow = c(5, 3), mar = c(4, 4, 3, 1))
+for (k in 1:n_elements) {
+  i <- idx[k, 1]
+  j <- idx[k, 2]
+  
+  plot(Omega_chain[i, j, ], type = "l", lwd = 0.5,
+       main = paste("Trace: Omega[", i, ",", j, "]", sep = ""),
+       xlab = "Iteration", ylab = "Value")
 }
 
-# =========================
-# ACF for Omega
-# (zero-variance elements would send acf() to infinity, so they are skipped)
-
-for (k in 1:nrow(idx)) {
-  i <- idx[k,1]; j <- idx[k,2]
-
+# --- ACF Plots Section ---
+par(mfrow = c(5, 3), mar = c(4, 4, 3, 1))
+for (k in 1:n_elements) {
+  i <- idx[k, 1]
+  j <- idx[k, 2]
+  
   x <- Omega_chain[i, j, ]
   if (sd(x) > 0) {
     acf(x,
-        main = paste("ACF: Omega[", i, ",", j, "]", sep=""),
+        main = paste("ACF: Omega[", i, ",", j, "]", sep = ""),
         xlab = "Lag")
   } else {
     plot.new()
-    title(main = paste("ACF: Omega[", i, ",", j, "] (constant)"))
+    title(main = paste("ACF: Omega[", i, ",", j, "] (constant)"), cex.main = 0.8)
   }
 }
+dev.off()
 
-# effective sample size
-Omega_post <- Omega_chain[,,(burn+1):n_iter]
+
+# ==============================================================================
+# EFFECTIVE SAMPLE SIZE (ESS) COMPUTATION
+# ==============================================================================
+Omega_post <- Omega_chain[, , (burn + 1):n_iter]
 n_post <- dim(Omega_post)[3]
 
 ESS_Omega <- matrix(NA, q, q)
-
-for(i in 1:q){
-  for(j in 1:q){
-
-    chain_ij <- mcmc(Omega_post[i,j,])
-    ESS_Omega[i,j] <- effectiveSize(chain_ij)
-
+for (i in 1:q) {
+  for (j in 1:q) {
+    chain_ij <- mcmc(Omega_post[i, j, ])
+    ESS_Omega[i, j] <- effectiveSize(chain_ij)
   }
 }
+cat("\nEffective Sample Size for Omega (Rounded):\n")
+print(round(ESS_Omega, 1))
 
-round(ESS_Omega,1)
 
-
-#################################
-## Posterior predictive checks ##
-
+# ==============================================================================
+# POSTERIOR PREDICTIVE CHECKS (PPC)
+# ==============================================================================
 burn <- 1000
-S_ppc <- 1000                      # predictive replications
-
-keep <- sample((burn+1):n_iter, S_ppc)
-
+S_ppc <- 1000                      
+keep <- sample((burn + 1):n_iter, S_ppc)
 X_rep <- array(NA, c(S_ppc, n, q))
 
-# posterior predictive generation
+# Generate posterior predictive replicated data
 for (s in 1:S_ppc) {
-
   mu_s    <- mu_chain[keep[s], ]
-  Omega_s <- Omega_chain[,, keep[s]]
-
+  Omega_s <- Omega_chain[, , keep[s]]
   Sigma_s <- solve(Omega_s)
-
-  X_rep[s,,] <- mvtnorm::rmvnorm(
+  
+  X_rep[s, , ] <- mvtnorm::rmvnorm(
     n = n,
     mean = mu_s,
     sigma = Sigma_s)
 }
 
-# test statistics
-t_rep_mean <- apply(X_rep, c(1,3), mean)
-t_rep_var  <- apply(X_rep, c(1,3), var)
-
+# Compute test statistics
+t_rep_mean <- apply(X_rep, c(1, 3), mean)
+t_rep_var  <- apply(X_rep, c(1, 3), var)
 t_obs_mean <- colMeans(X)
 t_obs_var  <- apply(X, 2, var)
 
-# Bayesian p-values for mean and variance per variable
-p_mean <- sapply(1:q, function(j) bayes_p_value(t_obs_mean[j], t_rep_mean[,j]))
-p_var  <- sapply(1:q, function(j) bayes_p_value(t_obs_var[j],  t_rep_var[,j]))
+# Compute marginal Bayesian p-values
+p_mean <- sapply(1:q, function(j) bayes_p_value(t_obs_mean[j], t_rep_mean[, j]))
+p_var  <- sapply(1:q, function(j) bayes_p_value(t_obs_var[j],  t_rep_var[, j]))
 
-cat("Bayesian p-values (mean):", round(p_mean, 3), "\n")
+cat("\nBayesian p-values (mean):", round(p_mean, 3), "\n")
 cat("Bayesian p-values (var):",  round(p_var, 3),  "\n")
 
-# plot for means
-par(mfrow=c(2,3))
 
-for(j in 1:q){
-  hist(t_rep_mean[,j],
-       breaks=40,
-       col="lightblue",
-       main=paste("Mean X",j))
-  abline(v=t_obs_mean[j], col="red", lwd=2)
+# ------------------------------------------------------------------------------
+# 3. PDF FOR POSTERIOR PREDICTIVE CHECKS ON MARGINAL STATS (BASE MODEL)
+# ------------------------------------------------------------------------------
+pdf("figures/ppc_marginal_stats_basemodel.pdf", width = 10, height = 7)
+
+# Histograms for Means (Flexible grid based on dimension q)
+n_cols_grid <- min(3, q)
+n_rows_grid <- ceiling(q / n_cols_grid)
+par(mfrow = c(n_rows_grid, n_cols_grid), mar = c(4, 4, 3, 1))
+
+for (j in 1:q) {
+  hist(t_rep_mean[, j],
+       breaks = 40,
+       col = "lightblue",
+       main = paste("PPC Mean: X", j, sep = ""),
+       xlab = "Value")
+  abline(v = t_obs_mean[j], col = "red", lwd = 2)
 }
 
-# plot variances
-par(mfrow=c(2,3))
-
-for(j in 1:q){
-  hist(t_rep_var[,j],
-       breaks=40,
-       col="lightblue",
-       main=paste("Var X",j))
-  abline(v=t_obs_var[j], col="red", lwd=2)
+# Histograms for Variances (Outputs to a new page within the same PDF)
+par(mfrow = c(n_rows_grid, n_cols_grid), mar = c(4, 4, 3, 1))
+for (j in 1:q) {
+  hist(t_rep_var[, j],
+       breaks = 40,
+       col = "lightblue",
+       main = paste("PPC Var: X", j, sep = ""),
+       xlab = "Value")
+  abline(v = t_obs_var[j], col = "red", lwd = 2)
 }
+dev.off()
 
 
-# correlations: divided in edges vs non edges
-pairs_all <- which(upper.tri(matrix(0,q,q)), arr.ind=TRUE)
+# ==============================================================================
+# NETWORK CORRELATIONS & STRUCTURAL PPC (EDGES VS NON-EDGES)
+# ==============================================================================
+pairs_all <- which(upper.tri(matrix(0, q, q)), arr.ind = TRUE)
 K <- nrow(pairs_all)
 
 t_corr_obs <- numeric(K)
 t_corr_rep <- matrix(NA, S_ppc, K)
 
-for(k in 1:K){
-
-  i <- pairs_all[k,1]
-  j <- pairs_all[k,2]
-
-  t_corr_obs[k] <- cor(X[,i], X[,j])
-
-  for(s in 1:S_ppc){
-    t_corr_rep[s,k] <- cor(X_rep[s,,i], X_rep[s,,j])
+for (k in 1:K) {
+  i <- pairs_all[k, 1]
+  j <- pairs_all[k, 2]
+  
+  t_corr_obs[k] <- cor(X[, i], X[, j])
+  for (s in 1:S_ppc) {
+    t_corr_rep[s, k] <- cor(X_rep[s, , i], X_rep[s, , j])
   }
 }
 
-# using the map graph
-pip <- apply(Adj_chain[,,(burn+1):n_iter], c(1,2), mean)
+# Identify graph structure using the MAP graph (PIP > 0.5 threshold)
+pip <- apply(Adj_chain[, , (burn + 1):n_iter], c(1, 2), mean)
 Adj_map <- (pip > 0.5) * 1
 
 is_edge <- logical(K)
-
-for(k in 1:K){
-  i <- pairs_all[k,1]
-  j <- pairs_all[k,2]
-  is_edge[k] <- Adj_map[i,j] == 1
+for (k in 1:K) {
+  i <- pairs_all[k, 1]
+  j <- pairs_all[k, 2]
+  is_edge[k] <- Adj_map[i, j] == 1
 }
 
 idx_edge   <- which(is_edge)
 idx_noedge <- which(!is_edge)
 
-# no edge correlations -> we expect them to be close to 0
-layout(1)
-hist(t_corr_rep[,idx_noedge],
-     breaks=40,
-     col="lightblue",
-     main="Predictive correlations (non-edges)",
-     xlab="corr")
 
-abline(v=t_corr_obs[idx_noedge],
-       col=rgb(1,0,0,0.4),
-       lwd=2)
+# ------------------------------------------------------------------------------
+# 4. PDF FOR PPC NETWORK CORRELATIONS AND GLOBAL DISCREPANZA (BASE MODEL)
+# ------------------------------------------------------------------------------
+pdf("figures/ppc_network_correlations_basemodel.pdf", width = 8, height = 6)
 
-# edge correlations
-hist(t_corr_rep[,idx_edge],
-     breaks=40,
-     col="lightgreen",
-     main="Predictive correlations (edges)",
-     xlab="corr")
+# Predictive correlations for structural non-edges
+if(length(idx_noedge) > 0) {
+  layout(1)
+  hist(t_corr_rep[, idx_noedge],
+       breaks = 40,
+       col = "lightblue",
+       main = "Predictive correlations (non-edges)",
+       xlab = "Correlation")
+  abline(v = t_corr_obs[idx_noedge], col = rgb(1, 0, 0, 0.4), lwd = 2)
+}
 
-abline(v=t_corr_obs[idx_edge],
-       col=rgb(1,0,0,0.4),
-       lwd=2)
+# Predictive correlations for structural edges
+if(length(idx_edge) > 0) {
+  layout(1)
+  hist(t_corr_rep[, idx_edge],
+       breaks = 40,
+       col = "lightgreen",
+       main = "Predictive correlations (edges)",
+       xlab = "Correlation")
+  abline(v = t_corr_obs[idx_edge], col = rgb(1, 0, 0, 0.4), lwd = 2)
+}
 
-
-# global statistics
+# Global structural discrepancy metric over non-edges
 T_obs <- sum(t_corr_obs[idx_noedge]^2)
-
 T_rep <- numeric(S_ppc)
 
-for(s in 1:S_ppc){
+for (s in 1:S_ppc) {
   T_rep[s] <- sum(t_corr_rep[s, idx_noedge]^2)
 }
 
+layout(1)
 hist(T_rep,
-     breaks=40,
-     col="lightblue",
-     main="Global non-edge correlation discrepancy")
+     breaks = 40,
+     col = "lightblue",
+     main = "Global non-edge correlation discrepancy",
+     xlab = "Discrepancy Value")
+abline(v = T_obs, col = "red", lwd = 2)
 
-abline(v=T_obs, col="red", lwd=2)
+dev.off()
 
 cat("Bayesian p-value (global non-edge correlation discrepancy):",
     round(bayes_p_value(T_obs, T_rep), 3), "\n")
