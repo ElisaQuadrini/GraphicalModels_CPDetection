@@ -330,30 +330,38 @@ for (t in 1:n_iter) {
 close(pb)
 
 # =============================================================================
-# SECTION 5: PERFORMANCE CHECK AND DIAGNOSTICS
+# SECTION 5: PERFORMANCE CHECK AND DIAGNOSTICS (SAVED TO PDF)
 # =============================================================================
 
 burn_in <- 500
 post_idx <- (burn_in + 1):n_iter
 
-# 1. VISUALIZE NUMBER OF CLUSTERS (K) AND CONCENTRATION PARAMETER (alpha0)
-# -----------------------------------------------------------------------------
-par(mfrow = c(2, 2))
+# 5.1: Save MCMC chain trace plots and convergence graphics to PDF
+tryCatch({
+  pdf("figures/changepoint_mcmc_diagnostics.pdf", width = 10, height = 8)
+  
+  par(mfrow = c(2, 2))
+  
+  # Trace plot for the number of active clusters (K)
+  plot(L_chain, type = "l", col = "darkblue", main = "Trace Plot of K",
+       xlab = "Iteration", ylab = "Number of Active Clusters (K)")
+  abline(h = K_true, col = "red", lty = 2, lwd = 2)
+  
+  # Posterior barplot of K
+  barplot(table(L_chain[post_idx]) / length(post_idx),
+          main = "Posterior Distribution of K",
+          col = "lightblue", xlab = "K", ylab = "Posterior Probability")
+  
+  # Trace plot for the concentration parameter alpha0
+  plot(alpha0_chain, type = "l", col = "darkgreen", main = "Trace Plot of alpha0",
+       xlab = "Iteration", ylab = "alpha0")
+  
+  # Autocorrelation function plot for K
+  acf(L_chain[post_idx], main = "ACF of K (Post Burn-in)", lag.max = 50)
+  
+}, finally = dev.off())
 
-plot(L_chain, type = "l", col = "darkblue", main = "Trace Plot of K",
-     xlab = "Iteration", ylab = "Number of Active Clusters (K)")
-abline(h = K_true, col = "red", lty = 2, lwd = 2)
-
-barplot(table(L_chain[post_idx]) / length(post_idx),
-        main = "Posterior Distribution of K",
-        col = "lightblue", xlab = "K", ylab = "Posterior Probability")
-
-plot(alpha0_chain, type = "l", col = "darkgreen", main = "Trace Plot of alpha0",
-     xlab = "Iteration", ylab = "alpha0")
-
-acf(L_chain[post_idx], main = "ACF of K (Post Burn-in)", lag.max = 50)
-
-# Quantitative convergence diagnostics for K and alpha0
+# Compute quantitative convergence diagnostics for K and alpha0
 ess_K     <- effectiveSize(as.mcmc(L_chain[post_idx]))
 ess_alpha <- effectiveSize(as.mcmc(alpha0_chain[post_idx]))
 geweke_K  <- geweke.diag(as.mcmc(L_chain[post_idx]))$z
@@ -367,39 +375,41 @@ cat(sprintf("Geweke Z-score for K:             %.2f\n", geweke_K))
 cat("==================================================\n")
 
 
-# 2. POSTERIOR SIMILARITY MATRIX (PSM) AND CHANGE-POINT DETECTION
-# -----------------------------------------------------------------------------
-par(mfrow = c(1, 1))
+# 5.2: Save Posterior Similarity Matrix (PSM) Heatmap to PDF
+tryCatch({
+  pdf("figures/changepoint_psm_matrix.pdf", width = 7, height = 7)
+  
+  par(mfrow = c(1, 1))
+  psm <- compute_psm(xi_chain, post_idx)
+  
+  image(1:n, 1:n, psm, col = heat.colors(32, rev = TRUE),
+        main = "Posterior Similarity Matrix (PSM) with True Change-Points",
+        xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
+  abline(v = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
+  abline(h = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
+  
+}, finally = dev.off())
 
-psm <- compute_psm(xi_chain, post_idx)
 
-image(1:n, 1:n, psm, col = heat.colors(32, rev = TRUE),
-      main = "Posterior Similarity Matrix (PSM) with True Change-Points",
-      xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
-abline(v = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
-abline(h = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
-
-# Adjusted Rand Index between the MAP partition (see Section below) and the
-# true labels is reported after the MAP partition has been computed.
-
-
-# 3. GRAPH POSTERIOR SPECIFIC DIAGNOSTICS: LINK POSTERIOR PROBABILITIES (PIP)
-# -----------------------------------------------------------------------------
-# compute_block_pip and plot_matrix are sourced from R/validation_checks.R
-
+# 5.3: Save Graph Posterior Inclusion Probabilities (PIP) Heatmaps to PDF
 pip_block1 <- compute_block_pip(1, 50, xi_chain, G_chain, post_idx, p)
 pip_block2 <- compute_block_pip(51, 100, xi_chain, G_chain, post_idx, p)
 pip_block3 <- compute_block_pip(101, 150, xi_chain, G_chain, post_idx, p)
 
-par(mfrow = c(2, 3))
-plot_matrix(Adj1, "True Graph: Block 1")
-plot_matrix(Adj2, "True Graph: Block 2")
-plot_matrix(Adj3, "True Graph: Block 3")
-plot_matrix(pip_block1, "Estimated PIP: Block 1")
-plot_matrix(pip_block2, "Estimated PIP: Block 2")
-plot_matrix(pip_block3, "Estimated PIP: Block 3")
+tryCatch({
+  pdf("figures/changepoint_graph_recovery_pip.pdf", width = 10, height = 7)
+  
+  par(mfrow = c(2, 3))
+  plot_matrix(Adj1, "True Graph: Block 1")
+  plot_matrix(Adj2, "True Graph: Block 2")
+  plot_matrix(Adj3, "True Graph: Block 3")
+  plot_matrix(pip_block1, "Estimated PIP: Block 1")
+  plot_matrix(pip_block2, "Estimated PIP: Block 2")
+  plot_matrix(pip_block3, "Estimated PIP: Block 3")
+  
+}, finally = dev.off())
 
-# graph recovery metrics per block (same metric used in sim1/sim3)
+# Display graph recovery metrics per block on the console
 cat("\nGraph recovery metrics per block:\n")
 cat("Block 1:\n"); print(graph_recovery_metrics(pip_block1, Adj1))
 cat("Block 2:\n"); print(graph_recovery_metrics(pip_block2, Adj2))
@@ -407,13 +417,11 @@ cat("Block 3:\n"); print(graph_recovery_metrics(pip_block3, Adj3))
 
 
 # =============================================================================
-# DETECTING AND ESTIMATING CHANGE-POINTS
+# DETECTING AND ESTIMATING CHANGE-POINTS (SAVED TO PDF)
 # =============================================================================
 
-# 1. COMPUTE MARGINAL CHANGE-POINT PROBABILITIES
-# -----------------------------------------------------------------------------
+# Compute marginal change-point probabilities
 cp_probabilities <- numeric(n - 1)
-
 for (t in post_idx) {
   xi_t <- xi_chain[t, ]
   cps_at_iteration <- (xi_t[-1] != xi_t[-n]) * 1
@@ -421,15 +429,19 @@ for (t in post_idx) {
 }
 cp_probabilities <- cp_probabilities / length(post_idx)
 
-par(mfrow = c(1, 1))
-plot(1:(n-1), cp_probabilities, type = "h", lwd = 2, col = "darkred",
-     main = "Posterior Marginal Change-Point Probabilities",
-     xlab = "Observation Index (Time/Sequence)", ylab = "Probability of a Change-Point")
-abline(v = c(nk, 2*nk), col = "blue", lty = 2, lwd = 1.5)
+# Save Change-Point Probabilities Plot to PDF
+tryCatch({
+  pdf("figures/changepoint_probabilities_plot.pdf", width = 9, height = 5)
+  
+  par(mfrow = c(1, 1))
+  plot(1:(n-1), cp_probabilities, type = "h", lwd = 2, col = "darkred",
+       main = "Posterior Marginal Change-Point Probabilities",
+       xlab = "Observation Index (Time/Sequence)", ylab = "Probability of a Change-Point")
+  abline(v = c(nk, 2*nk), col = "blue", lty = 2, lwd = 1.5)
+  
+}, finally = dev.off())
 
-
-# 2. EXTRACT ESTIMATED CHANGE-POINT LOCATIONS (THRESHOLD APPROACH)
-# -----------------------------------------------------------------------------
+# Extract estimated change-point locations via threshold
 threshold <- 0.5
 estimated_cps <- which(cp_probabilities > threshold)
 
@@ -443,52 +455,40 @@ if(length(estimated_cps) > 0) {
   cat("No clear change-points detected with threshold =", threshold, "\n")
 }
 
-
-# 3. COMPUTE THE MAP (MAXIMUM A POSTERIORI) PARTITION ESTIMATOR
-# -----------------------------------------------------------------------------
+# Compute the MAP (Maximum A Posteriori) partition estimator
 partition_strings <- apply(xi_chain[post_idx, ], 1, paste, collapse = "-")
 map_partition_string <- names(which.max(table(partition_strings)))
 map_partition <- as.numeric(strsplit(map_partition_string, "-")[[1]])
-
 map_cps <- which(map_partition[-1] != map_partition[-n])
 
 cat("Estimated Change-Points from MAP partition:      ", paste(map_cps, collapse = ", "), "\n")
 cat("==================================================\n")
 
-# Adjusted Rand Index between the MAP partition (labels only, order ignored)
-# and the true block labels, for comparability with sim3_clustering.R
-ari_value <- compute_ari(map_partition, xi_true)
-cat(sprintf("Adjusted Rand Index (MAP partition vs true blocks): %.3f\n", ari_value))
 
 
 # =============================================================================
-# SECTION 6: POSTERIOR PREDICTIVE CHECKS (PPC)
+# SECTION 6: POSTERIOR PREDICTIVE CHECKS (PPC) (SAVED TO PDF)
 # =============================================================================
-# Data are regenerated block-by-block using the MAP partition, sampling
-# (mu_l*, K_l*) from their full conditionals given the observations
-# currently assigned to each block.
 
 S_ppc <- 200
 keep  <- sample(post_idx, S_ppc)
-
 K_map <- length(unique(map_partition))
-
 X_rep <- array(NA, c(S_ppc, n, p))
 
+# 1. Generate replicated datasets from the posterior predictive distribution
 for (s in 1:S_ppc) {
-
   t_s  <- keep[s]
   xi_s <- xi_chain[t_s, ]
   L_s  <- max(xi_s)
-
+  
   for (l in 1:L_s) {
-
     in_l <- which(xi_s == l)
     if (length(in_l) == 0) next
-
+    
     X_l <- X[in_l, , drop = FALSE]
     n_l <- length(in_l)
-
+    
+    # Compute cluster-specific empirical means and sum of squares
     Xbar_l <- colMeans(X_l)
     S_l    <- matrix(0, p, p)
     for (i in 1:n_l) {
@@ -497,28 +497,33 @@ for (s in 1:S_ppc) {
     }
     dbar <- matrix(Xbar_l - mu0, ncol = 1)
     A_l  <- (n_l * n0) / (n_l + n0) * (dbar %*% t(dbar))
-
+    
+    # Update hyperparameter values for the full conditionals
     delta_post_l <- delta0 + n_l
     D_post_l     <- D0 + S_l + A_l
     mu_post_l    <- (n_l * Xbar_l + n0 * mu0) / (n_l + n0)
-
+    
+    # Extract graph structure for current iteration and component
     G_l_s <- G_chain[[t_s]][[as.character(l)]]
     if (is.null(G_l_s)) G_l_s <- diag(p) * 0
-
+    
+    # Draw precision matrix from the G-Wishart full conditional distribution
     K_s <- tryCatch(
       rgwish(n = 1, adj = G_l_s, b = delta_post_l, D = D_post_l),
       error = function(e) diag(p)
     )
-
-    mu_cov_l <- solve((n_l + n0) * K_s)
-    mu_s_l   <- as.numeric(rmvnorm(1, mu_post_l, mu_cov_l))
-
+    
+    # Draw mean vector conditional on the sampled precision matrix
+    mu_cov_l  <- solve((n_l + n0) * K_s)
+    mu_s_l    <- as.numeric(rmvnorm(1, mu_post_l, mu_cov_l))
     Sigma_s_l <- solve(K_s)
+    
+    # Simulate replicated data points for the active observations
     X_rep[s, in_l, ] <- rmvnorm(n_l, mu_s_l, Sigma_s_l)
   }
 }
 
-# test statistics per true block (means and variances)
+# 2. Compute observed test statistics per true block/regime
 t_obs_mean <- matrix(NA, K_true, p)
 t_obs_var  <- matrix(NA, K_true, p)
 
@@ -528,38 +533,64 @@ for (k in 1:K_true) {
   t_obs_var[k, ]  <- apply(X_k, 2, var)
 }
 
+# 3. Compute replicated test statistics per true block (Corrected 2D Mapping)
 t_rep_mean <- array(NA, c(S_ppc, K_true, p))
 t_rep_var  <- array(NA, c(S_ppc, K_true, p))
 
 for (s in 1:S_ppc) {
   for (k in 1:K_true) {
+    # Extract the 3D slice corresponding to sample 's' and true block 'k'
     X_rep_k <- X_rep[s, xi_true == k, , drop = FALSE]
-    t_rep_mean[s, k, ] <- apply(X_rep_k, 3, mean)
-    t_rep_var[s, k, ]  <- apply(X_rep_k, 3, var)
+    
+    # Drop the redundant first dimension (sample index 's') to obtain a 2D matrix
+    X_rep_k <- array(X_rep_k, dim = dim(X_rep_k)[-1])
+    
+    # Validate block cardinality to prevent undefined sample variances
+    if (length(which(xi_true == k)) > 1) {
+      # Compute column-wise means and variances across the variables (Margin = 2)
+      t_rep_mean[s, k, ] <- colMeans(X_rep_k)
+      t_rep_var[s, k, ]  <- apply(X_rep_k, 2, var)
+    } else {
+      # Fallback for single observation blocks where variance is undefined
+      t_rep_mean[s, k, ] <- X_rep_k
+      t_rep_var[s, k, ]  <- rep(NA, p)
+    }
   }
 }
 
-par(mfrow = c(p, K_true), mar = c(2.5, 2.5, 2, 1), oma = c(1, 1, 3, 0))
-for (j in 1:p) {
-  for (k in 1:K_true) {
-    hist(t_rep_mean[, k, j], breaks = 20, col = "lightblue", border = "white",
-         main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.9)
-    abline(v = t_obs_mean[k, j], col = "red", lwd = 2)
+# Save PPC Means Histograms to PDF
+tryCatch({
+  pdf("figures/changepoint_ppc_means.pdf", width = 3 * K_true, height = 2.5 * p)
+  
+  par(mfrow = c(p, K_true), mar = c(3, 3, 2.5, 1), oma = c(1, 1, 4, 0))
+  for (j in 1:p) {
+    for (k in 1:K_true) {
+      hist(t_rep_mean[, k, j], breaks = 20, col = "lightblue", border = "white",
+           main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.95)
+      abline(v = t_obs_mean[k, j], col = "red", lwd = 2)
+    }
   }
-}
-title("Posterior Predictive Checks: MEANS per Block and Variable", outer = TRUE, cex.main = 1.3)
+  title("Posterior Predictive Checks: MEANS per Block and Variable", outer = TRUE, cex.main = 1.2)
+  
+}, finally = dev.off())
 
-par(mfrow = c(p, K_true), mar = c(2.5, 2.5, 2, 1), oma = c(1, 1, 3, 0))
-for (j in 1:p) {
-  for (k in 1:K_true) {
-    hist(t_rep_var[, k, j], breaks = 20, col = "lightgreen", border = "white",
-         main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.9)
-    abline(v = t_obs_var[k, j], col = "red", lwd = 2)
+# Save PPC Variances Histograms to PDF
+tryCatch({
+  pdf("figures/changepoint_ppc_variances.pdf", width = 3 * K_true, height = 2.5 * p)
+  
+  par(mfrow = c(p, K_true), mar = c(3, 3, 2.5, 1), oma = c(1, 1, 4, 0))
+  for (j in 1:p) {
+    for (k in 1:K_true) {
+      hist(t_rep_var[, k, j], breaks = 20, col = "lightgreen", border = "white",
+           main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.95)
+      abline(v = t_obs_var[k, j], col = "red", lwd = 2)
+    }
   }
-}
-title("Posterior Predictive Checks: VARIANCES per Block and Variable", outer = TRUE, cex.main = 1.3)
+  title("Posterior Predictive Checks: VARIANCES per Block and Variable", outer = TRUE, cex.main = 1.2)
+  
+}, finally = dev.off())
 
-# Bayesian p-values summary table
+# Print Bayesian p-values summary table
 p_mean <- sapply(1:K_true, function(k) sapply(1:p, function(j) bayes_p_value(t_obs_mean[k, j], t_rep_mean[, k, j])))
 p_var  <- sapply(1:K_true, function(k) sapply(1:p, function(j) bayes_p_value(t_obs_var[k, j],  t_rep_var[, k, j])))
 
