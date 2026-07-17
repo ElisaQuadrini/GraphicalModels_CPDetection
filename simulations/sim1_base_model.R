@@ -108,7 +108,7 @@ log_marginal_full_graph <- function(A, delta, D, n, S){
 
 # initialization
 n_iter <- 20000
-burnin   <- 5000
+burnin   <- 1000
 
 Adj_curr <- matrix(0, q, q)   # start from empty graph
 Omega_curr <- diag(q)
@@ -216,10 +216,11 @@ plot(n_edges_chain, type="l",
      ylab="Edges",
      xlab="Iteration")
 
-burn <- 1000
-Adj_post <- Adj_chain[,,(burn+1):dim(Adj_chain)[3]]
+# Extract post-burn-in adjacency matrices using the MCMC burnin parameter 
+Adj_post <- Adj_chain[, , (burnin + 1):n_iter]
 
-pip <- apply(Adj_post, c(1,2), mean)
+# Compute Posterior Inclusion Probabilities (PIP)
+pip <- apply(Adj_post, c(1, 2), mean)
 round(pip,2)
 
 # maximum a posteriori
@@ -313,7 +314,7 @@ dev.off()
 # ==============================================================================
 # EFFECTIVE SAMPLE SIZE (ESS) COMPUTATION
 # ==============================================================================
-Omega_post <- Omega_chain[, , (burn + 1):n_iter]
+Omega_post <- Omega_chain[, , (burnin + 1):n_iter]
 n_post <- dim(Omega_post)[3]
 
 ESS_Omega <- matrix(NA, q, q)
@@ -330,9 +331,9 @@ print(round(ESS_Omega, 1))
 # ==============================================================================
 # POSTERIOR PREDICTIVE CHECKS (PPC)
 # ==============================================================================
-burn <- 1000
+# Sample MCMC iterations strictly from the post-burn-in period (1,001 to 20,000)
 S_ppc <- 1000                      
-keep <- sample((burn + 1):n_iter, S_ppc)
+keep <- sample((burnin + 1):n_iter, S_ppc)
 X_rep <- array(NA, c(S_ppc, n, q))
 
 # Generate posterior predictive replicated data
@@ -413,7 +414,7 @@ for (k in 1:K) {
 }
 
 # Identify graph structure using the MAP graph (PIP > 0.5 threshold)
-pip <- apply(Adj_chain[, , (burn + 1):n_iter], c(1, 2), mean)
+pip <- apply(Adj_chain[, , (burnin + 1):n_iter], c(1, 2), mean)
 Adj_map <- (pip > 0.5) * 1
 
 is_edge <- logical(K)

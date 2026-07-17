@@ -50,28 +50,53 @@ bayes_p_value <- function(t_obs, t_rep) {
   mean(t_rep >= t_obs, na.rm = TRUE)
 }
 
-# compute_block_pip: posterior inclusion probability matrix for a
-# contiguous block of observations (change-point model), computed as the
-# average, over post-burnin iterations, of the graph assigned to the
-# cluster label that is modal within the block at that iteration.
-compute_block_pip <- function(start_obs, end_obs, xi_chain, G_chain, post_idx, p) {
+# compute_block_pip_summary: computes the block-specific PIP matrix via 
+# an iteration-wise graph summary method. For each post-burn-in MCMC 
+# iteration t, it reconstructs the graph G_star(x_i) assigned to each 
+# individual observation within the true block (e.g., 1 to 50). It then 
+# evaluates an intra-iteration mean profile across these observations and 
+# averages these profiles over the entire post-burn-in chain.
+compute_block_pip_summary <- function(start_obs, end_obs, xi_chain, G_chain, post_idx, p) {
 
-  pip_matrix <- matrix(0, p, p)
-  counter    <- 0
+  total_pip_matrix   <- matrix(0, p, p)
+  n_valid_iterations <- 0
+  block_indices      <- start_obs:end_obs
 
+  # Loop over each post-burn-in MCMC iteration t
   for (t in post_idx) {
 
-    labels_in_block <- xi_chain[t, start_obs:end_obs]
-    modal_label      <- as.character(names(which.max(table(labels_in_block))))
+    G_t <- G_chain[[t]]
+    if (is.null(G_t)) next
 
-    G_t <- G_chain[[t]][[modal_label]]
-    if (!is.null(G_t)) {
-      pip_matrix <- pip_matrix + G_t
-      counter    <- counter + 1
+    # Adjacency accumulator for the current iteration t across block points
+    G_summary_t       <- matrix(0, p, p)
+    valid_nodes_count <- 0
+
+    # Reconstruct the structural graph for each individual observation in the block
+    for (i in block_indices) {
+      obs_label <- as.character(xi_chain[t, i])
+      G_i_t     <- G_t[[obs_label]]
+
+      if (!is.null(G_i_t)) {
+        G_summary_t       <- G_summary_t + G_i_t
+        valid_nodes_count <- valid_nodes_count + 1
+      }
+    }
+
+    # If the block contains valid graphs at iteration t, compute the iteration-wise summary
+    if (valid_nodes_count > 0) {
+      G_summary_t        <- G_summary_t / valid_nodes_count
+      total_pip_matrix   <- total_pip_matrix + G_summary_t
+      n_valid_iterations <- n_valid_iterations + 1
     }
   }
 
-  pip_matrix / counter
+  # Return the final aggregated summary matrix normalized across valid iterations
+  if (n_valid_iterations > 0) {
+    return(total_pip_matrix / n_valid_iterations)
+  } else {
+    return(matrix(0, p, p))
+  }
 }
 
 # plot_matrix: grayscale heatmap of an adjacency or PIP matrix, with axes
