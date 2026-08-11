@@ -392,9 +392,9 @@ tryCatch({
 
 
 # 5.3: Save Graph Posterior Inclusion Probabilities (PIP) Heatmaps to PDF
-pip_block1 <- compute_block_pip(1, 50, xi_chain, G_chain, post_idx, p)
-pip_block2 <- compute_block_pip(51, 100, xi_chain, G_chain, post_idx, p)
-pip_block3 <- compute_block_pip(101, 150, xi_chain, G_chain, post_idx, p)
+pip_block1 <- compute_block_pip_summary(1, 50, xi_chain, G_chain, post_idx, p)
+pip_block2 <- compute_block_pip_summary(51, 100, xi_chain, G_chain, post_idx, p)
+pip_block3 <- compute_block_pip_summary(101, 150, xi_chain, G_chain, post_idx, p)
 
 tryCatch({
   pdf("figures/changepoint_graph_recovery_pip.pdf", width = 10, height = 7)
@@ -462,6 +462,10 @@ map_partition <- as.numeric(strsplit(map_partition_string, "-")[[1]])
 map_cps <- which(map_partition[-1] != map_partition[-n])
 
 cat("Estimated Change-Points from MAP partition:      ", paste(map_cps, collapse = ", "), "\n")
+cat("==================================================\n")
+
+ari_score <- compute_ari(map_partition, xi_true)
+cat(sprintf("Adjusted Rand Index (ARI) della partizione MAP:  %.4f\n", ari_score))
 cat("==================================================\n")
 
 
