@@ -26,51 +26,57 @@ set.seed(42)
 # =============================================================================
 # SECTION 1: DATA SIMULATION (FOR ORDERED CHANGE-POINT PARTITIONS)
 # We simulate data from K_true = 3 ordered blocks, but only 2 distinct
-# regimes: blocks 1 and 2 (adjacent) share the same graph, precision matrix,
-# and mean vector. Block 3 is the only genuinely distinct regime. NO
-# SHUFFLING is performed to preserve the temporal/sequential structure.
+# regimes: blocks 1 and 2 (adjacent) share the same sparse graph structure,
+# precision matrix, and mean vector. Block 3 is the only genuinely distinct regime.
+# NO SHUFFLING is performed to preserve the temporal/sequential structure.
 
 p      <- 5        # number of variables (dimensions)
 nk     <- 50       # number of observations per ordered block
 K_true <- 3        # number of true ordered BLOCKS (not regimes)
 n      <- nk * K_true # total number of observations
 
-# --- Define Decomposable Graphs for each REGIME (not each block) ---
+# --- Define Sparse Decomposable Graphs for each REGIME ---
 
-# regime A graph: two cliques {1,2,3} and {3,4,5} -- shared by blocks 1 and 2
+# Regime A Graph (Shared by Block 1 & Block 2): Sparse Chain Graph 1-2-3-4-5
+# Edges: (1,2), (2,3), (3,4), (4,5)
 AdjA <- matrix(0, p, p)
-AdjA[1:3, 1:3] <- 1
-AdjA[3:5, 3:5] <- 1
+AdjA[1, 2] <- AdjA[2, 1] <- 1
+AdjA[2, 3] <- AdjA[3, 2] <- 1
+AdjA[3, 4] <- AdjA[4, 3] <- 1
+AdjA[4, 5] <- AdjA[5, 4] <- 1
 diag(AdjA) <- 0
 
-# regime B graph: cliques {1,2} and {2,3,4,5} -- used only by block 3
+# Regime B Graph (Used only by Block 3): Sparse Star Graph centered at node 3
+# Edges: (3,1), (3,2), (3,4), (3,5)
 AdjB <- matrix(0, p, p)
-AdjB[1:2, 1:2] <- 1
-AdjB[2:5, 2:5] <- 1
+AdjB[3, 1] <- AdjB[1, 3] <- 1
+AdjB[3, 2] <- AdjB[2, 3] <- 1
+AdjB[3, 4] <- AdjB[4, 3] <- 1
+AdjB[3, 5] <- AdjB[5, 3] <- 1
 diag(AdjB) <- 0
 
 Adj1 <- AdjA   # block 1 uses regime A
-Adj2 <- AdjA   # block 2 uses the same graph as block 1
+Adj2 <- AdjA   # block 2 uses the same sparse graph as block 1
 Adj3 <- AdjB   # block 3 is the distinct regime
 
-# --- G-Wishart hyperparameters for data generation ---
+# --- G-Wishart Hyperparameters for Sparse Precision Matrix Generation ---
 b_gen <- 3
 D_gen <- diag(p)
 
-# Sample the precision matrix once PER REGIME, not once per block
+# Sample sparse precision matrices via G-Wishart prior once PER REGIME
 OmegaA_true <- rgwish(n = 1, adj = AdjA, b = b_gen, D = D_gen)
 OmegaB_true <- rgwish(n = 1, adj = AdjB, b = b_gen, D = D_gen)
 
 Omega1_true <- OmegaA_true
-Omega2_true <- OmegaA_true   # same precision matrix as block 1
+Omega2_true <- OmegaA_true   # same sparse precision matrix as block 1
 Omega3_true <- OmegaB_true
 
-# True means: block 2 shares the mean of block 1 as well
+# True mean vectors
 muA_true <- c( 2,  2,  0, -1, -1)
 muB_true <- c(-2,  0,  1,  1,  0)
 
 mu1_true <- muA_true
-mu2_true <- muA_true   # same mean as block 1
+mu2_true <- muA_true   # same mean vector as block 1
 mu3_true <- muB_true
 
 # --- Sample ordered observations from each block ---
@@ -82,22 +88,38 @@ X3 <- rmvnorm(nk, mean = mu3_true, sigma = solve(Omega3_true))
 X       <- rbind(X1, X2, X3)        # n x p matrix
 xi_true <- rep(1:K_true, each = nk) # true sequential block labels (1,1..., 2,2..., 3,3...)
 
-# regime membership: ground truth for graph recovery (2 distinct regimes)
+# Regime membership: ground truth for graph recovery (2 distinct regimes)
 regime_true <- c(1, 1, 2)[xi_true]  # 1 = regime A (blocks 1-2), 2 = regime B (block 3)
 
-# true change-point locations: since blocks 1 and 2 share a regime, the
+# True change-point locations: since blocks 1 and 2 share a regime, the
 # ONLY genuine structural change point is at the block 2 / block 3 boundary
 true_cps_regime <- 2 * nk
 
-# --- Diagnostic plot for sequential structural changes ---
+# =============================================================================
+# SAVE DIAGNOSTIC PLOT TO PDF
+# =============================================================================
+
+pdf_path <- "figures/changepoint_sequential_data_trace_sharedregime12.pdf"
+
+# Crea la directory 'figures' se non esiste
+if (!dir.exists("figures")) {
+  dir.create("figures", recursive = TRUE)
+}
+
+pdf(file = pdf_path, width = 9, height = 5.5)
+
 plot(rowMeans(X), type = "b", col = xi_true, pch = 20,
-     main = "Sequential Data Matrix (Colors represent true structural blocks)",
+     main = "Sequential Data Matrix (Blocks 1 & 2 share Regime A, Block 3 uses Regime B)",
      xlab = "Observation Index (Time/Sequence)", ylab = "Row Means")
 abline(v = c(nk, 2*nk), col = "darkgray", lty = 2, lwd = 2)
 abline(v = true_cps_regime, col = "purple", lty = 1, lwd = 2)
-legend("topright", legend = c("Simulated block boundary", "True regime change point"),
-       col = c("darkgray", "purple"), lty = c(2, 1), lwd = 2)
+legend("topright", 
+       legend = c("Simulated block boundary", "True regime change point"),
+       col = c("darkgray", "purple"), 
+       lty = c(2, 1), 
+       lwd = 2)
 
+dev.off()
 # =============================================================================
 # SECTION 2: PRIOR HYPERPARAMETERS
 

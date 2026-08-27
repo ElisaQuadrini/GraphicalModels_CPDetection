@@ -23,7 +23,7 @@ set.seed(42)
 
 
 # =============================================================================
-# SECTION 1: DATA SIMULATION (FOR ORDERED CHANGE-POINT PARTITIONS)
+# SECTION 1: DATA SIMULATION (FOR ORDERED CHANGE-POINT PARTITIONS WITH SHARED REGIME)
 # We simulate data from K_true = 3 ordered blocks, but only 2 distinct
 # regimes: blocks 1 and 3 share the same graph, precision matrix, and mean
 # vector. Block 2 is the only genuinely distinct regime. NO SHUFFLING is
@@ -32,20 +32,23 @@ set.seed(42)
 p      <- 5        # number of variables (dimensions)
 nk     <- 50       # number of observations per ordered block
 K_true <- 3        # number of true ordered BLOCKS (not regimes)
-n      <- nk * K_true # total number of observations
+n      <- nk * K_true # total number of observations (150)
 
-# --- Define Decomposable Graphs for each REGIME (not each block) ---
+# --- Define Sparse Decomposable Graphs for each REGIME ---
 
-# regime A graph: two cliques {1,2,3} and {3,4,5} -- shared by blocks 1 and 3
+# Regime A graph: Chain Graph 1-2-3-4-5 (4 edges) -- shared by blocks 1 and 3
+# Cliques: {1,2}, {2,3}, {3,4}, {4,5} with separators {2}, {3}, {4}
 AdjA <- matrix(0, p, p)
-AdjA[1:3, 1:3] <- 1
-AdjA[3:5, 3:5] <- 1
-diag(AdjA) <- 0
+AdjA[1, 2] <- AdjA[2, 1] <- 1
+AdjA[2, 3] <- AdjA[3, 2] <- 1
+AdjA[3, 4] <- AdjA[4, 3] <- 1
+AdjA[4, 5] <- AdjA[5, 4] <- 1
 
-# regime B graph: cliques {1,2} and {2,3,4,5} -- used only by block 2
+# Regime B graph: Two small cliques {1,2,3} and {3,4} (4 edges) -- used only by block 2
+# Clique 1: {1,2,3}, Clique 2: {3,4}, Separator: {3}
 AdjB <- matrix(0, p, p)
-AdjB[1:2, 1:2] <- 1
-AdjB[2:5, 2:5] <- 1
+AdjB[1:3, 1:3] <- 1
+AdjB[3, 4] <- AdjB[4, 3] <- 1
 diag(AdjB) <- 0
 
 Adj1 <- AdjA
@@ -81,14 +84,29 @@ X3 <- rmvnorm(nk, mean = mu3_true, sigma = solve(Omega3_true))
 X       <- rbind(X1, X2, X3)        # n x p matrix
 xi_true <- rep(1:K_true, each = nk) # true sequential block labels (1,1..., 2,2..., 3,3...)
 
-# regime membership: ground truth for graph recovery (2 distinct regimes)
+# Regime membership: ground truth for graph recovery (2 distinct regimes)
 regime_true <- c(1, 2, 1)[xi_true]  # 1 = regime A, 2 = regime B
 
-# --- Diagnostic plot for sequential structural changes ---
+# Ensure output directory exists
+if (!dir.exists("figures")) {
+  dir.create("figures", recursive = TRUE)
+}
+
+# --- Save Diagnostic Plot with required naming convention (PDF) ---
+pdf("figures/changepoint_sequential_data_trace_sharedregime.pdf", width = 8, height = 5)
 plot(rowMeans(X), type = "b", col = xi_true, pch = 20,
-     main = "Sequential Data Matrix (Colors represent true structural blocks)",
+     main = "Sequential Data Matrix (Shared Regime: Blocks 1 & 3)",
      xlab = "Observation Index (Time/Sequence)", ylab = "Row Means")
 abline(v = c(nk, 2*nk), col = "darkgray", lty = 2, lwd = 2)
+legend("topright", legend = paste("Block", 1:K_true), col = 1:K_true, pch = 20, bg = "white")
+dev.off()
+
+# Display directly in active screen device
+plot(rowMeans(X), type = "b", col = xi_true, pch = 20,
+     main = "Sequential Data Matrix (Shared Regime: Blocks 1 & 3)",
+     xlab = "Observation Index (Time/Sequence)", ylab = "Row Means")
+abline(v = c(nk, 2*nk), col = "darkgray", lty = 2, lwd = 2)
+legend("topright", legend = paste("Block", 1:K_true), col = 1:K_true, pch = 20, bg = "white")
 
 # =============================================================================
 # SECTION 2: PRIOR HYPERPARAMETERS

@@ -17,7 +17,7 @@ set.seed(42)
 
 
 # =============================================================================
-# SECTION 1: DATA SIMULATION (FOR ORDERED CHANGE-POINT PARTITIONS)
+# SECTION 1: DATA SIMULATION (FOR ORDERED CHANGE-POINT PARTITIONS WITH SPARSE GRAPHS)
 # We simulate data from K_true = 3 ordered blocks. Observations within each block
 # follow a distinct sparse precision matrix defined on a decomposable graph.
 # NO SHUFFLING is performed to preserve the temporal/sequential structure.
@@ -25,31 +25,38 @@ set.seed(42)
 p      <- 5        # number of variables (dimensions)
 nk     <- 50       # number of observations per ordered block
 K_true <- 3        # true number of blocks (change-points)
-n      <- nk * K_true # total number of observations
+n      <- nk * K_true # total number of observations (150)
 
-# --- Define Decomposable Graphs for each block ---
+# --- Define Sparse Decomposable Graphs for each block ---
 
-# Block 1 graph: two cliques {1,2,3} and {3,4,5}
+# Block 1 graph: Chain Graph 1-2-3-4-5 (4 edges)
+# Cliques: {1,2}, {2,3}, {3,4}, {4,5} with separators {2}, {3}, {4}
 Adj1 <- matrix(0, p, p)
-Adj1[1:3, 1:3] <- 1
-Adj1[3:5, 3:5] <- 1
-diag(Adj1) <- 0
+Adj1[1, 2] <- Adj1[2, 1] <- 1
+Adj1[2, 3] <- Adj1[3, 2] <- 1
+Adj1[3, 4] <- Adj1[4, 3] <- 1
+Adj1[4, 5] <- Adj1[5, 4] <- 1
 
-# Block 2 graph: cliques {1,2} and {2,3,4,5}
+# Block 2 graph: Two small cliques {1,2,3} and {3,4} (4 edges)
+# Clique 1: {1,2,3}, Clique 2: {3,4}, Separator: {3}
 Adj2 <- matrix(0, p, p)
-Adj2[1:2, 1:2] <- 1
-Adj2[2:5, 2:5] <- 1
+Adj2[1:3, 1:3] <- 1
+Adj2[3, 4] <- Adj2[4, 3] <- 1
 diag(Adj2) <- 0
 
-# Block 3 graph: complete graph (all edges)
-Adj3 <- matrix(1, p, p)
-diag(Adj3) <- 0
+# Block 3 graph: Star Graph centered at node 3 (4 edges)
+# Edges: (3,1), (3,2), (3,4), (3,5)
+Adj3 <- matrix(0, p, p)
+Adj3[3, 1] <- Adj3[1, 3] <- 1
+Adj3[3, 2] <- Adj3[2, 3] <- 1
+Adj3[3, 4] <- Adj3[4, 3] <- 1
+Adj3[3, 5] <- Adj3[5, 3] <- 1
 
 # --- G-Wishart hyperparameters for data generation ---
 b_gen <- 3
 D_gen <- diag(p)
 
-# Sample true precision matrices (Omega) from G-Wishart given the graphs
+# Sample true sparse precision matrices (Omega) from G-Wishart given the graphs
 Omega1_true <- rgwish(n = 1, adj = Adj1, b = b_gen, D = D_gen)
 Omega2_true <- rgwish(n = 1, adj = Adj2, b = b_gen, D = D_gen)
 Omega3_true <- rgwish(n = 1, adj = Adj3, b = b_gen, D = D_gen)
@@ -68,11 +75,26 @@ X3 <- rmvnorm(nk, mean = mu3_true, sigma = solve(Omega3_true))
 X       <- rbind(X1, X2, X3)        # n x p matrix
 xi_true <- rep(1:K_true, each = nk) # true sequential block labels (1,1..., 2,2..., 3,3...)
 
-# --- Diagnostic plot for sequential structural changes ---
+# Ensure output directory exists
+if (!dir.exists("figures")) {
+  dir.create("figures", recursive = TRUE)
+}
+
+# --- Save Diagnostic Plot with prefix "changepoint_" (PDF format) ---
+pdf("figures/changepoint_sequential_data_trace.pdf", width = 8, height = 5)
 plot(rowMeans(X), type = "b", col = xi_true, pch = 20,
      main = "Sequential Data Matrix (Colors represent true structural blocks)",
      xlab = "Observation Index (Time/Sequence)", ylab = "Row Means")
 abline(v = c(nk, 2*nk), col = "darkgray", lty = 2, lwd = 2)
+legend("topright", legend = paste("Block", 1:K_true), col = 1:K_true, pch = 20, bg = "white")
+dev.off()
+
+# Display directly in active screen device
+plot(rowMeans(X), type = "b", col = xi_true, pch = 20,
+     main = "Sequential Data Matrix (Colors represent true structural blocks)",
+     xlab = "Observation Index (Time/Sequence)", ylab = "Row Means")
+abline(v = c(nk, 2*nk), col = "darkgray", lty = 2, lwd = 2)
+legend("topright", legend = paste("Block", 1:K_true), col = 1:K_true, pch = 20, bg = "white")
 
 # =============================================================================
 # SECTION 2: PRIOR HYPERPARAMETERS
@@ -601,3 +623,4 @@ p_var  <- sapply(1:K_true, function(k) sapply(1:p, function(j) bayes_p_value(t_o
 cat("\nBayesian p-values (rows = variables, columns = blocks)\n")
 cat("Means:\n"); print(round(p_mean, 3))
 cat("Variances:\n"); print(round(p_var, 3))
+
