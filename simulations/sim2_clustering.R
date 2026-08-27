@@ -20,30 +20,38 @@ library(mclust)
 set.seed(42)
 
 # =============================================================================
-# SECTION 1: DATA SIMULATION
-# We simulate data from L_true = 3 clusters, each with a different sparse
-# precision matrix defined on a decomposable graph.
+# SECTION 1: DATA SIMULATION (SPARSE GRAPHS VARIANT)
+# We simulate data from L_true = 3 clusters, each with a different SPARSE
+# precision matrix defined on a decomposable graph. All three graphs are
+# deliberately sparse and structurally distinct (chain, small disjoint
+# cliques, star), to test graph recovery under low edge density.
 
 p      <- 5       # number of variables
 n      <- 150     # total number of observations
 n1     <- 50      # obs per cluster (balanced for simulation)
 L_true <- 3        # true number of clusters
 
-# cluster 1 graph: two cliques {1,2,3} and {3,4,5}
+# cluster 1 graph: chain 1-2-3-4-5 (4 edges, singleton separators {2},{3},{4})
 Adj1 <- matrix(0, p, p)
-Adj1[1:3, 1:3] <- 1
-Adj1[3:5, 3:5] <- 1
-diag(Adj1) <- 0
+Adj1[1, 2] <- Adj1[2, 1] <- 1
+Adj1[2, 3] <- Adj1[3, 2] <- 1
+Adj1[3, 4] <- Adj1[4, 3] <- 1
+Adj1[4, 5] <- Adj1[5, 4] <- 1
 
-# cluster 2 graph: cliques {1,2} and {2,3,4,5}
+# cluster 2 graph: two small cliques {1,2,3} and {3,4} with separator {3}
+# (3 edges within {1,2,3} + 1 edge for {3,4} = 4 edges total)
 Adj2 <- matrix(0, p, p)
-Adj2[1:2, 1:2] <- 1
-Adj2[2:5, 2:5] <- 1
+Adj2[1:3, 1:3] <- 1
+Adj2[3, 4] <- Adj2[4, 3] <- 1
 diag(Adj2) <- 0
 
-# cluster 3 graph: complete graph (all edges)
-Adj3 <- matrix(1, p, p)
-diag(Adj3) <- 0
+# cluster 3 graph: star centered at node 3 (4 edges, singleton separator {3}
+# for every leaf -- a tree, hence trivially decomposable)
+Adj3 <- matrix(0, p, p)
+Adj3[3, 1] <- Adj3[1, 3] <- 1
+Adj3[3, 2] <- Adj3[2, 3] <- 1
+Adj3[3, 4] <- Adj3[4, 3] <- 1
+Adj3[3, 5] <- Adj3[5, 3] <- 1
 
 b_gen <- 3
 D_gen <- diag(p)
@@ -69,6 +77,34 @@ X         <- X[perm, ]
 xi_true   <- xi_true[perm]
 
 pairs(X)
+
+# =============================================================================
+# FIGURE: PAIRS PLOT OF SIMULATED DATA, COLORED BY TRUE CLUSTER
+# =============================================================================
+tryCatch({
+  pdf("figures/pairs_data_clustering_sparsegraphs.pdf", width = 8, height = 8)
+
+  layout(1)
+  cluster_colors <- c("steelblue", "darkorange", "forestgreen")
+
+  pairs(X,
+        col    = cluster_colors[xi_true],
+        pch    = 19,
+        cex    = 0.6,
+        main   = "Simulated Data by True Cluster (Sparse Graphs)",
+        labels = paste0("X", 1:p))
+
+  # legend placed in a separate call, since pairs() does not support
+  # a built-in legend argument
+  legend("bottomright",
+         inset  = 0.02,
+         legend = paste("Cluster", 1:L_true),
+         col    = cluster_colors,
+         pch    = 19,
+         xpd    = TRUE,
+         cex    = 0.8)
+
+}, finally = dev.off())
 
 
 # =============================================================================
