@@ -365,17 +365,17 @@ tryCatch({
   par(mfrow = c(2, 2))
   
   # Trace plot for the number of active clusters (K)
-  plot(L_chain, type = "l", col = "darkblue", main = "Trace Plot of K",
+  plot(L_chain, type = "l", col = "black", main = "Trace Plot of K",
        xlab = "Iteration", ylab = "Number of Active Clusters (K)")
   abline(h = K_true, col = "red", lty = 2, lwd = 2)
   
   # Posterior barplot of K
   barplot(table(L_chain[post_idx]) / length(post_idx),
           main = "Posterior Distribution of K",
-          col = "lightblue", xlab = "K", ylab = "Posterior Probability")
+          col = "lightgrey", xlab = "K", ylab = "Posterior Probability")
   
   # Trace plot for the concentration parameter alpha0
-  plot(alpha0_chain, type = "l", col = "darkgreen", main = "Trace Plot of alpha0",
+  plot(alpha0_chain, type = "l", col = "black", main = "Trace Plot of alpha0",
        xlab = "Iteration", ylab = "alpha0")
   
   # Autocorrelation function plot for K
@@ -404,11 +404,11 @@ tryCatch({
   par(mfrow = c(1, 1))
   psm <- compute_psm(xi_chain, post_idx)
   
-  image(1:n, 1:n, psm, col = heat.colors(32, rev = TRUE),
+  image(1:n, 1:n, psm, gray.colors(100, start = 1, end = 0),
         main = "Posterior Similarity Matrix (PSM) with True Change-Points",
         xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
-  abline(v = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
-  abline(h = c(nk, 2*nk), col = "blue", lty = 2, lwd = 2)
+  abline(v = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
+  abline(h = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
   
 }, finally = dev.off())
 
@@ -591,7 +591,7 @@ tryCatch({
   par(mfrow = c(p, K_true), mar = c(3, 3, 2.5, 1), oma = c(1, 1, 4, 0))
   for (j in 1:p) {
     for (k in 1:K_true) {
-      hist(t_rep_mean[, k, j], breaks = 20, col = "lightblue", border = "white",
+      hist(t_rep_mean[, k, j], breaks = 20, col = "lightgrey",
            main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.95)
       abline(v = t_obs_mean[k, j], col = "red", lwd = 2)
     }
@@ -607,7 +607,7 @@ tryCatch({
   par(mfrow = c(p, K_true), mar = c(3, 3, 2.5, 1), oma = c(1, 1, 4, 0))
   for (j in 1:p) {
     for (k in 1:K_true) {
-      hist(t_rep_var[, k, j], breaks = 20, col = "lightgreen", border = "white",
+      hist(t_rep_var[, k, j], breaks = 20, col = "lightgrey",
            main = paste("Block", k, "- Var", j), xlab = "", ylab = "", cex.main = 0.95)
       abline(v = t_obs_var[k, j], col = "red", lwd = 2)
     }
