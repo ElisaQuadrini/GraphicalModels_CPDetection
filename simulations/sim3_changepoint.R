@@ -397,21 +397,25 @@ cat(sprintf("Geweke Z-score for K:             %.2f\n", geweke_K))
 cat("==================================================\n")
 
 
-# 5.2: Save Posterior Similarity Matrix (PSM) Heatmap to PDF
-tryCatch({
-  pdf("figures/changepoint_psm_matrix.pdf", width = 7, height = 7)
-  
-  par(mfrow = c(1, 1))
-  psm <- compute_psm(xi_chain, post_idx)
-  
-  image(1:n, 1:n, psm, gray.colors(100, start = 1, end = 0),
-        main = "Posterior Similarity Matrix (PSM) with True Change-Points",
-        xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
-  abline(v = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
-  abline(h = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
-  
-}, finally = dev.off())
+while (!is.null(dev.list())) dev.off()
 
+# 5.2: Save Posterior Similarity Matrix (PSM) Heatmap to PDF
+psm <- compute_psm(xi_chain, post_idx)
+n_obs <- nrow(psm)  # Assicura che le dimensioni siano esattamente 150
+
+pdf("figures/changepoint_psm_matrix.pdf", width = 7, height = 7)
+on.exit(dev.off(), add = TRUE) # Chiude in modo sicuro alla fine o in caso di errore
+
+par(mfrow = c(1, 1))
+
+image(1:n_obs, 1:n_obs, psm, col = gray.colors(100, start = 1, end = 0),
+      main = "Posterior Similarity Matrix (PSM) with True Change-Points",
+      xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
+
+abline(v = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
+abline(h = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
+
+dev.off()
 
 # 5.3: Save Graph Posterior Inclusion Probabilities (PIP) Heatmaps to PDF
 pip_block1 <- compute_block_pip_summary(1, 50, xi_chain, G_chain, post_idx, p)

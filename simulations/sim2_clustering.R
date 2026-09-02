@@ -82,27 +82,30 @@ pairs(X)
 # FIGURE: PAIRS PLOT OF SIMULATED DATA, COLORED BY TRUE CLUSTER
 # =============================================================================
 tryCatch({
-  pdf("figures/pairs_data_clustering_sparsegraphs.pdf", width = 8, height = 8)
+  pdf("figures/pairs_data_clustering_sparsegraphs.pdf", width = 10, height = 8)
 
-  layout(1)
-  cluster_colors <- c("steelblue", "darkorange", "forestgreen")
+  # Reserve extra space on the right-hand side for the legend, outside
+  # the plotting matrix itself
+  par(omd = c(0, 0.88, 0, 1))
 
   pairs(X,
-        col    = cluster_colors[xi_true],
+        col    = xi_true,
         pch    = 19,
         cex    = 0.6,
         main   = "Simulated Data by True Cluster (Sparse Graphs)",
         labels = paste0("X", 1:p))
+  
+  par(xpd = TRUE)
 
-  # legend placed in a separate call, since pairs() does not support
-  # a built-in legend argument
-  legend("bottomright",
-         inset  = 0.02,
-         legend = paste("Cluster", 1:L_true),
-         col    = cluster_colors,
-         pch    = 19,
-         xpd    = TRUE,
-         cex    = 0.8)
+  # legend placed outside the plot region (right margin), since pairs()
+  # does not support a built-in legend argument
+  legend(x = 1.02, y = 0.6,
+        legend = paste("Cluster", 1:L_true),
+        col    = 1:L_true,
+        pch    = 19,
+        bty    = "n",
+        cex    = 0.9,
+        xjust  = 0)
 
 }, finally = dev.off())
 
