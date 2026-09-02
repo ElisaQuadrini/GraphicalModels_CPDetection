@@ -371,18 +371,18 @@ tryCatch({
   par(mfrow = c(2, 1))
   
   # Trace plot for the number of active clusters
-  plot(L_chain, type = "l", col = "steelblue",
+  plot(L_chain, type = "l", col = "black",
        main = "Trace Plot: Number of Active Clusters L",
        xlab = "Iteration", ylab = "L")
   abline(h = L_true, col = "red", lty = 2, lwd = 2)
   abline(v = burnin, col = "gray50", lty = 3)
   legend("topright",
          legend = c("Sampled L", "True L", "Burn-in"),
-         col    = c("steelblue", "red", "gray50"),
+         col    = c("black", "red", "gray50"),
          lty    = c(1, 2, 3))
   
   # Trace plot for the concentration parameter
-  plot(alpha0_chain, type = "l", col = "darkorange",
+  plot(alpha0_chain, type = "l", col = "black",
        main = "Trace Plot: Concentration Parameter alpha0",
        xlab = "Iteration", ylab = "alpha0")
   abline(v = burnin, col = "gray50", lty = 3)
@@ -397,7 +397,7 @@ tryCatch({
   ord <- order(xi_true)
   image(1:n, 1:n,
         coclustering[ord, ord],
-        col  = heat.colors(100, rev = TRUE),
+        col  = gray.colors(100, start = 1, end = 0),
         main = "Posterior Co-Clustering Matrix (Ordered by True Labels)",
         xlab = "Observation Index",
         ylab = "Observation Index")
@@ -504,7 +504,7 @@ tryCatch({
       rep_vals <- rep_vals[!is.na(rep_vals)]
       
       hist(rep_vals,
-           breaks = 20, col = "lightblue", border = "white",
+           breaks = 20, col = "lightgrey",
            main = paste("Cluster", l, "- Var", j),
            xlab = "", ylab = "", cex.main = 0.95)
       
@@ -526,7 +526,7 @@ tryCatch({
       rep_vals <- rep_vals[!is.na(rep_vals)]
       
       hist(rep_vals,
-           breaks = 20, col = "lightgreen", border = "white",
+           breaks = 20, col = "lightgrey",
            main = paste("Cluster", l, "- Var", j),
            xlab = "", ylab = "", cex.main = 0.95)
       
@@ -612,7 +612,7 @@ tryCatch({
     # Estimated Cluster PIP Heatmap
     image(1:p, 1:p, t(pip_cluster[, , k]),
           zlim = c(0, 1),
-          col  = heat.colors(100, rev = TRUE),
+          col  = gray.colors(100, start = 1, end = 0),
           main = paste("Estimated Cluster", k, "- PIP Matrix"),
           xlab = "Node Index", ylab = "Node Index")
     
@@ -622,7 +622,7 @@ tryCatch({
     if (true_k >= 1 && true_k <= length(Adj_list)) {
       image(1:p, 1:p, t(Adj_list[[true_k]]),
             zlim = c(0, 1),
-            col  = c("white", "steelblue"),
+            col  = c("white", "black"),
             main = paste("True Cluster", true_k, "- True Adjacency"),
             xlab = "Node Index", ylab = "Node Index")
     } else {

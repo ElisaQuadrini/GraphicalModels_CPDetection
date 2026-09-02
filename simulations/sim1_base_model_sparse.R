@@ -391,7 +391,7 @@ par(mfrow = c(n_rows_grid, n_cols_grid), mar = c(4, 4, 3, 1))
 for (j in 1:q) {
   hist(t_rep_mean[, j],
        breaks = 40,
-       col = "lightblue",
+       col = "lightgrey",
        main = paste("PPC Mean: X", j, sep = ""),
        xlab = "Value")
   abline(v = t_obs_mean[j], col = "red", lwd = 2)
@@ -402,7 +402,7 @@ par(mfrow = c(n_rows_grid, n_cols_grid), mar = c(4, 4, 3, 1))
 for (j in 1:q) {
   hist(t_rep_var[, j],
        breaks = 40,
-       col = "lightblue",
+       col = "lightgrey",
        main = paste("PPC Var: X", j, sep = ""),
        xlab = "Value")
   abline(v = t_obs_var[j], col = "red", lwd = 2)
