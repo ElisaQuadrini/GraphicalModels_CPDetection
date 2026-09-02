@@ -32,13 +32,57 @@ R/
                         compute_psm.
 
 simulations/
-  sim1_base_model.R      Single decomposable graph, no clustering.
+  sim1_base_model.R              Single decomposable graph, no clustering
+                                  (Chapter 1 base illustration).
 
-  sim2_changepoint.R     Split-and-merge sampler for ordered change-point
-                        partitions.
+  sim1_base_model_sparse.R       Sparse-graph variant of the base model
+                                  illustration (chain graph 1-2-3-4-5, 4
+                                  edges out of 10 possible pairs), used to
+                                  assess graph recovery under lower edge
+                                  density.
 
-  sim3_clustering.R      Collapsed sampler for exchangeable DP mixtures of
-                        decomposable GGMs.
+  sim2_clustering.R              Collapsed sampler for exchangeable DP
+                                  mixtures of decomposable GGMs (Chapter 2
+                                  illustration, 3 distinct clusters).
+
+  sim2_clustering_2regimes.R     Shared-regime variant of
+                                  the clustering sampler, testing partition
+                                  recovery when two of the three underlying
+                                  components share the same regime. Since
+                                  clustering is exchangeable, cluster order
+                                  is not meaningful here.
+
+  sim3_changepoint.R             Split-and-merge sampler for ordered
+                                  change-point partitions (Chapter 3
+                                  illustration, 3 ordered blocks, 3
+                                  distinct regimes).
+
+  sim3_changepoint_12regimes.R   Shared-regime robustness check (adjacent
+                                  case): Blocks 1 and 2 are generated from
+                                  the same regime (same graph, precision
+                                  matrix, and mean) and are temporally
+                                  adjacent, while Block 3 is distinct. The
+                                  true number of change points therefore
+                                  collapses from 2 to 1. Tests whether the
+                                  sampler avoids spuriously flagging a
+                                  change point between two adjacent
+                                  same-regime blocks.
+
+  sim3_changepoint_2regimes.R    Shared-regime robustness check
+                                  (non-adjacent case): two of the three
+                                  ordered blocks share the same regime, but
+                                  are separated by a block generated from a
+                                  different regime (e.g. Block 1 and Block
+                                  3 share a regime, with Block 2 distinct
+                                  in between). Because the shared-regime
+                                  blocks are not contiguous, the true
+                                  number of change points remains 2, even
+                                  though two of the three blocks are
+                                  generated from an identical graph,
+                                  precision matrix, and mean. Tests whether
+                                  the sampler correctly detects both
+                                  change points based on local adjacency
+                                  rather than on global regime identity.
 ```
 
 ## Notes
