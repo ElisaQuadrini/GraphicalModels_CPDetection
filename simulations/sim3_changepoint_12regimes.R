@@ -420,21 +420,25 @@ cat(sprintf("Effective Sample Size for alpha0: %.2f\n", ess_alpha))
 cat(sprintf("Geweke Z-score for K:             %.2f\n", geweke_K))
 cat("==================================================\n")
 
+while (!is.null(dev.list())) dev.off()
 
 # 5.2: Save Posterior Similarity Matrix (PSM) Heatmap to PDF
-tryCatch({
-  pdf("figures/changepoint_psm_matrix_sharedregime12.pdf", width = 7, height = 7)
-  
-  par(mfrow = c(1, 1))
-  psm <- compute_psm(xi_chain, post_idx)
-  
-  image(1:n, 1:n, psm, gray.colors(100, start = 1, end = 0),
-        main = "Posterior Similarity Matrix (PSM) with True Change-Points",
-        xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
-  abline(v = true_cps_regime, col = "purple", lty = 1, lwd = 2)
-  abline(h = true_cps_regime, col = "purple", lty = 1, lwd = 2)
-  
-}, finally = dev.off())
+psm <- compute_psm(xi_chain, post_idx)
+n_obs <- nrow(psm)
+
+pdf("figures/changepoint_psm_matrix_sharedregime12.pdf", width = 7, height = 7)
+on.exit(dev.off(), add = TRUE) 
+
+par(mfrow = c(1, 1))
+
+image(1:n_obs, 1:n_obs, psm, col = gray.colors(100, start = 1, end = 0),
+      main = "Posterior Similarity Matrix (PSM) with True Change-Points",
+      xlab = "Observation Index (Time)", ylab = "Observation Index (Time)")
+
+abline(v = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
+abline(h = c(nk, 2*nk), col = "red", lty = 2, lwd = 2)
+
+dev.off()
 
 
 # 5.3: Save Graph Posterior Inclusion Probabilities (PIP) Heatmaps to PDF
@@ -659,3 +663,4 @@ p_var  <- sapply(1:K_true, function(k) sapply(1:p, function(j) bayes_p_value(t_o
 cat("\nBayesian p-values (rows = variables, columns = blocks)\n")
 cat("Means:\n"); print(round(p_mean, 3))
 cat("Variances:\n"); print(round(p_var, 3))
+

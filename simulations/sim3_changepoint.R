@@ -401,10 +401,10 @@ while (!is.null(dev.list())) dev.off()
 
 # 5.2: Save Posterior Similarity Matrix (PSM) Heatmap to PDF
 psm <- compute_psm(xi_chain, post_idx)
-n_obs <- nrow(psm)  # Assicura che le dimensioni siano esattamente 150
+n_obs <- nrow(psm) 
 
 pdf("figures/changepoint_psm_matrix.pdf", width = 7, height = 7)
-on.exit(dev.off(), add = TRUE) # Chiude in modo sicuro alla fine o in caso di errore
+on.exit(dev.off(), add = TRUE) 
 
 par(mfrow = c(1, 1))
 
