@@ -1,6 +1,7 @@
 # --- Simulations Output and Graphs ---
 figures/*.pdf
 figures/*.png
+figures/application/*.pdf
 
 # --- temp and R session ---
 .Rhistory
@@ -22,3 +23,6 @@ figures/*.png
 # --- system files (VS) ---
 .DS_Store
 .vscode/
+
+# --- data ---
+*.rds
