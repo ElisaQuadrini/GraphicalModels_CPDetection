@@ -358,30 +358,33 @@ close(pb)
 burn_in <- 500
 post_idx <- (burn_in + 1):n_iter
 
-# 5.1: Save MCMC chain trace plots and convergence graphics to PDF
+# 5.1: Save MCMC chain trace plots to PDF; barplot and ACF are shown on screen only.
 tryCatch({
-  pdf("figures/changepoint_mcmc_diagnostics.pdf", width = 10, height = 8)
+  pdf("figures/changepoint_mcmc_diagnostics.pdf", width = 10, height = 4)
   
-  par(mfrow = c(2, 2))
+  par(mfrow = c(1, 2))
   
   # Trace plot for the number of active clusters (K)
   plot(L_chain, type = "l", col = "black", main = "Trace Plot of K",
        xlab = "Iteration", ylab = "Number of Active Clusters (K)")
   abline(h = K_true, col = "red", lty = 2, lwd = 2)
   
-  # Posterior barplot of K
-  barplot(table(L_chain[post_idx]) / length(post_idx),
-          main = "Posterior Distribution of K",
-          col = "lightgrey", xlab = "K", ylab = "Posterior Probability")
-  
   # Trace plot for the concentration parameter alpha0
   plot(alpha0_chain, type = "l", col = "black", main = "Trace Plot of alpha0",
        xlab = "Iteration", ylab = "alpha0")
   
-  # Autocorrelation function plot for K
-  acf(L_chain[post_idx], main = "ACF of K (Post Burn-in)", lag.max = 50)
-  
 }, finally = dev.off())
+
+# Posterior barplot of K and ACF of K are displayed on screen only, not saved
+par(mfrow = c(1, 2))
+
+# Posterior barplot of K
+barplot(table(L_chain[post_idx]) / length(post_idx),
+        main = "Posterior Distribution of K",
+        col = "lightgrey", xlab = "K", ylab = "Posterior Probability")
+
+# Autocorrelation function plot for K
+acf(L_chain[post_idx], main = "ACF of K (Post Burn-in)", lag.max = 50)
 
 # Compute quantitative convergence diagnostics for K and alpha0
 ess_K     <- effectiveSize(as.mcmc(L_chain[post_idx]))

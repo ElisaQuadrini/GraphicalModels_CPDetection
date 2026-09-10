@@ -265,9 +265,12 @@ if (!dir.exists("figures")) {
 
 # ------------------------------------------------------------------------------
 # 1. TRACEPLOTS & ACF FOR MU (BASE MODEL)
+# Traceplots are saved to PDF, ACF plots are shown on screen only.
 # ------------------------------------------------------------------------------
-pdf("figures/mu_plots_basemodel.pdf", width = 8, height = 2.2 * q)
-par(mfrow = c(q, 2), mar = c(2, 4, 4, 2))
+
+# --- Save traceplots only ---
+pdf("figures/mu_plots_basemodel.pdf", width = 5, height = 2.2 * q)
+par(mfrow = c(q, 1), mar = c(2, 4, 4, 2))
 
 for (j in 1:q) {
   plot(
@@ -279,25 +282,29 @@ for (j in 1:q) {
     xlab = "Iteration",
     ylab = paste("mu[", j, "]", sep = "")
   )
+}
+dev.off()
+
+# --- Show ACF plots on screen (not saved) ---
+par(mfrow = c(q, 1), mar = c(2, 4, 4, 2))
+for (j in 1:q) {
   acf(mu_chain[, j],
       main = paste("ACF plot: mu[", j, "]", sep = ""),
-      xlab = "Iteration",
+      xlab = "Lag",
       ylab = paste("mu[", j, "]", sep = "")
   )
 }
-dev.off()
 
 
 # ------------------------------------------------------------------------------
 # 2. TRACEPLOTS & ACF FOR OMEGA (BASE MODEL)
+# Traceplots are saved to PDF, ACF plots are shown on screen only.
 # ------------------------------------------------------------------------------
 idx <- which(upper.tri(matrix(0, q, q), diag = TRUE), arr.ind = TRUE)
 n_elements <- nrow(idx)
 
-# Save Omega traceplots and ACF to a single multi-page PDF (5x3 grid layout)
+# --- Save traceplots only ---
 pdf("figures/omega_diagnostics_basemodel.pdf", width = 10, height = 12)
-
-# --- Trace Plots Section ---
 par(mfrow = c(5, 3), mar = c(4, 4, 3, 1))
 for (k in 1:n_elements) {
   i <- idx[k, 1]
@@ -307,8 +314,9 @@ for (k in 1:n_elements) {
        main = paste("Trace: Omega[", i, ",", j, "]", sep = ""),
        xlab = "Iteration", ylab = "Value")
 }
+dev.off()
 
-# --- ACF Plots Section ---
+# --- Show ACF plots on screen (not saved) ---
 par(mfrow = c(5, 3), mar = c(4, 4, 3, 1))
 for (k in 1:n_elements) {
   i <- idx[k, 1]
@@ -324,8 +332,6 @@ for (k in 1:n_elements) {
     title(main = paste("ACF: Omega[", i, ",", j, "] (constant)"), cex.main = 0.8)
   }
 }
-dev.off()
-
 
 # ==============================================================================
 # EFFECTIVE SAMPLE SIZE (ESS) COMPUTATION
