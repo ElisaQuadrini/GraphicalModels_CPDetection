@@ -255,6 +255,37 @@ cor(X)
 mean(accept)
 acf(n_edges_chain) # reasonable, since we move in the neighborhood of the previous decomposable graph
 
+# ==============================================================================
+# GRAPH RECOVERY FIGURE: PIP HEATMAP VS TRUE GRAPH NETWORK (BASE MODEL)
+# ==============================================================================
+tryCatch({
+  pdf("figures/graph_recovery_pip_basemodel.pdf", width = 9, height = 4.5)
+  
+  par(mfrow = c(1, 2), mar = c(4, 4, 3, 2))
+  
+  # Panel 1: Posterior Inclusion Probabilities heatmap
+  image(1:q, 1:q, t(pip[q:1, ]),
+        col = gray.colors(100, start = 1, end = 0),
+        axes = FALSE,
+        main = "Posterior Inclusion Probabilities",
+        xlab = "", ylab = "")
+  axis(1, at = 1:q, labels = 1:q)
+  axis(2, at = 1:q, labels = q:1)
+  box()
+  
+  # Panel 2: True Graph Network Plot
+  plot(
+    G_omega,
+    layout = layout_in_circle(G_omega),
+    vertex.color = "lightblue",
+    vertex.size = 30,
+    vertex.label.color = "black",
+    vertex.label.cex = 1.1,
+    main = "True Sparse Decomposable Graph"
+  )
+  
+}, finally = dev.off())
+
 
 # ==============================================================================
 # CONFIGURATION AND FIGURES DIRECTORY SETUP
